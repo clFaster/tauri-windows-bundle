@@ -4,7 +4,7 @@ import type { InitOptions } from '../types.js';
 import { findProjectRoot, readTauriConfig, getWindowsDir } from '../core/project-discovery.js';
 import { generateBundleConfig, generateGitignore } from '../generators/config.js';
 import { generateAssets } from '../generators/assets.js';
-import { generateManifestTemplate } from '../core/manifest.js';
+import { generateManifestTemplate, getPackageVersion } from '../core/manifest.js';
 
 export async function init(options: InitOptions): Promise<void> {
   console.log('Initializing Windows bundle configuration...\n');
@@ -25,23 +25,27 @@ export async function init(options: InitOptions): Promise<void> {
   generateManifestTemplate(windowsDir);
   console.log('  Created AppxManifest.xml.template');
 
-  // Generate placeholder assets
-  await generateAssets(windowsDir);
+  // Generate assets (copy from src-tauri/icons or generate placeholders)
+  const assetsCopied = await generateAssets(windowsDir, projectRoot);
 
   // Generate .gitignore
   generateGitignore(windowsDir);
 
-  // Update package.json with build script
+  // Update package.json with devDependency and build script
   updatePackageJson(projectRoot);
-  console.log('  Added tauri:windows:build script to package.json');
 
   console.log('\n Windows bundle configuration created!');
   console.log(`\nNext steps:`);
-  console.log(`  1. Edit src-tauri/gen/windows/bundle.config.json`);
+  console.log(`  1. Run: pnpm install`);
+  console.log(`  2. Edit src-tauri/gen/windows/bundle.config.json`);
   console.log(`     - Set your publisher CN (from your code signing certificate)`);
   console.log(`     - Set your publisher display name`);
-  console.log(`  2. Replace placeholder icons in src-tauri/gen/windows/Assets/`);
-  console.log(`  3. Run: pnpm tauri:windows:build`);
+  if (!assetsCopied) {
+    console.log(`  3. Replace placeholder icons in src-tauri/gen/windows/Assets/`);
+    console.log(`  4. Run: pnpm tauri:windows:build`);
+  } else {
+    console.log(`  3. Run: pnpm tauri:windows:build`);
+  }
 }
 
 function updatePackageJson(projectRoot: string): void {
@@ -56,14 +60,18 @@ function updatePackageJson(projectRoot: string): void {
     const content = fs.readFileSync(packageJsonPath, 'utf-8');
     const pkg = JSON.parse(content);
 
-    if (!pkg.scripts) {
-      pkg.scripts = {};
-    }
+    // Add devDependency
+    pkg.devDependencies = pkg.devDependencies || {};
+    pkg.devDependencies['@choochmeque/tauri-windows-bundle'] = `^${getPackageVersion()}`;
 
+    // Add script
+    pkg.scripts = pkg.scripts || {};
     if (!pkg.scripts['tauri:windows:build']) {
       pkg.scripts['tauri:windows:build'] = 'tauri-windows-bundle build';
-      fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n');
     }
+
+    fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n');
+    console.log('  Updated package.json with devDependency and build script');
   } catch (error) {
     console.log(
       `  Warning: Could not update package.json: ${error instanceof Error ? error.message : error}`

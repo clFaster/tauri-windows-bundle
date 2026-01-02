@@ -22,6 +22,11 @@ const PACKAGE_ROOT = findPackageRoot(__dirname);
 const TEMPLATES_DIR = path.join(PACKAGE_ROOT, 'templates');
 const EXTENSIONS_DIR = path.join(TEMPLATES_DIR, 'extensions');
 
+export function getPackageVersion(): string {
+  const pkg = JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, 'package.json'), 'utf-8'));
+  return pkg.version;
+}
+
 function loadTemplate(templatePath: string): string {
   return fs.readFileSync(templatePath, 'utf-8');
 }

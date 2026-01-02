@@ -1,22 +1,90 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { Jimp } from 'jimp';
 import { MSIX_ASSETS } from '../types.js';
 
-export async function generateAssets(windowsDir: string): Promise<void> {
+// Map MSIX asset names to Tauri icon names
+const TAURI_ICON_MAP: Record<string, string> = {
+  'StoreLogo.png': 'StoreLogo.png',
+  'Square44x44Logo.png': 'Square44x44Logo.png',
+  'Square150x150Logo.png': 'Square150x150Logo.png',
+  'LargeTile.png': 'Square310x310Logo.png',
+};
+
+function getTauriIconsDir(projectRoot: string): string {
+  return path.join(projectRoot, 'src-tauri', 'icons');
+}
+
+export async function generateAssets(windowsDir: string, projectRoot?: string): Promise<boolean> {
   const assetsDir = path.join(windowsDir, 'Assets');
   fs.mkdirSync(assetsDir, { recursive: true });
+
+  const tauriIconsDir = projectRoot ? getTauriIconsDir(projectRoot) : null;
+  let copiedFromTauri = false;
 
   for (const asset of MSIX_ASSETS) {
     const width = asset.width || asset.size || 50;
     const height = asset.height || asset.size || 50;
     const assetPath = path.join(assetsDir, asset.name);
 
-    // Generate a simple placeholder PNG
-    const pngData = createPlaceholderPng(width, height);
-    fs.writeFileSync(assetPath, pngData);
+    // Check if we can copy from Tauri icons
+    const tauriIconName = TAURI_ICON_MAP[asset.name];
+    const tauriIconPath =
+      tauriIconsDir && tauriIconName ? path.join(tauriIconsDir, tauriIconName) : null;
+
+    if (tauriIconPath && fs.existsSync(tauriIconPath)) {
+      fs.copyFileSync(tauriIconPath, assetPath);
+      copiedFromTauri = true;
+    } else if (asset.name === 'Wide310x150Logo.png' && tauriIconsDir) {
+      // Generate wide tile from square icon
+      const generated = await generateWideTile(tauriIconsDir, assetPath);
+      if (!generated) {
+        const pngData = createPlaceholderPng(width, height);
+        fs.writeFileSync(assetPath, pngData);
+      } else {
+        copiedFromTauri = true;
+      }
+    } else {
+      // Fall back to placeholder
+      const pngData = createPlaceholderPng(width, height);
+      fs.writeFileSync(assetPath, pngData);
+    }
   }
 
-  console.log('  Generated placeholder assets - replace with real icons before publishing');
+  if (copiedFromTauri) {
+    console.log('  Copied assets from src-tauri/icons');
+  } else {
+    console.log('  Generated placeholder assets - replace with real icons before publishing');
+  }
+
+  return copiedFromTauri;
+}
+
+async function generateWideTile(tauriIconsDir: string, outputPath: string): Promise<boolean> {
+  // Try to find a square icon to use as source
+  const sourceIcons = ['Square150x150Logo.png', 'Square142x142Logo.png', 'icon.png', '128x128.png'];
+
+  for (const iconName of sourceIcons) {
+    const iconPath = path.join(tauriIconsDir, iconName);
+    if (fs.existsSync(iconPath)) {
+      try {
+        const image = await Jimp.read(iconPath);
+        const iconSize = 150; // Height of the wide tile
+        const resized = image.clone().resize({ w: iconSize, h: iconSize });
+
+        // Create 310x150 canvas with transparent background
+        const canvas = new Jimp({ width: 310, height: 150, color: 0x00000000 });
+        const x = Math.floor((310 - iconSize) / 2);
+        canvas.composite(resized, x, 0);
+        await canvas.write(outputPath as `${string}.${string}`);
+        return true;
+      } catch {
+        // Try next icon
+      }
+    }
+  }
+
+  return false;
 }
 
 function createPlaceholderPng(width: number, height: number): Buffer {
