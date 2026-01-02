@@ -40,7 +40,14 @@
     "xcodegen",
     "sharekit",
     "xcodeproj",
-    "CLSID"
+    "CLSID",
+    "autoplay",
+    "msixbundle",
+    "msix",
+    "multiarch",
+    "msvc",
+    "rustup",
+    "archs"
   ],
   "useGitignore": true,
   "ignorePaths": [
