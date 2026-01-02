@@ -92,13 +92,16 @@ export async function build(options: BuildOptions): Promise<void> {
     const releaseFlag = options.release ? '--release' : '';
 
     // Build command based on runner
+    // --bundles none skips MSI/NSIS bundling since we're creating MSIX
     let buildCommand: string;
     if (runner === 'npm') {
       // npm requires -- to pass args to the script
-      buildCommand = `npm run tauri build -- --target ${target} ${releaseFlag}`.trim();
+      buildCommand =
+        `npm run tauri build -- --target ${target} --bundles none ${releaseFlag}`.trim();
     } else {
       // cargo, pnpm, yarn, bun, etc.
-      buildCommand = `${runner} tauri build --target ${target} ${releaseFlag}`.trim();
+      buildCommand =
+        `${runner} tauri build --target ${target} --bundles none ${releaseFlag}`.trim();
     }
 
     try {
