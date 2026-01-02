@@ -47,7 +47,7 @@ program
   .command('build')
   .description('Build MSIX package')
   .option('--arch <architectures>', 'Architectures to build (comma-separated: x64,arm64)', 'x64')
-  .option('--release', 'Build in release mode')
+  .option('--debug', 'Build in debug mode (release is default)')
   .option('--min-windows <version>', 'Minimum Windows version', '10.0.17763.0')
   .option('--runner <runner>', 'Build runner (cargo, pnpm, npm, yarn, etc.)', 'cargo')
   .option('--verbose', 'Show full build output instead of spinner')

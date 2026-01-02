@@ -119,7 +119,7 @@ export interface InitOptions {
 
 export interface BuildOptions {
   arch?: string;
-  release?: boolean;
+  debug?: boolean;
   minWindows?: string;
   runner?: string;
   verbose?: boolean;

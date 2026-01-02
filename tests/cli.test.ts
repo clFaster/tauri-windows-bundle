@@ -123,8 +123,8 @@ describe('cli', () => {
 
     it('calls build with options', async () => {
       const { build } = await import('../src/commands/build.js');
-      await actionHandlers['build']({ arch: 'x64', release: true });
-      expect(build).toHaveBeenCalledWith({ arch: 'x64', release: true });
+      await actionHandlers['build']({ arch: 'x64', debug: true });
+      expect(build).toHaveBeenCalledWith({ arch: 'x64', debug: true });
     });
 
     it('handles Error', async () => {

@@ -250,20 +250,38 @@ describe('build command', () => {
     );
   });
 
-  it('builds with release flag when specified', async () => {
+  it('builds in release mode by default (no --debug flag)', async () => {
     createFullProject();
     const originalCwd = process.cwd();
     process.chdir(tempDir);
 
     try {
-      await build({ release: true });
+      await build({});
     } catch {
       // Expected
     }
 
     process.chdir(originalCwd);
     expect(execWithProgress).toHaveBeenCalledWith(
-      expect.stringContaining('--release'),
+      expect.not.stringContaining('--debug'),
+      expect.any(Object)
+    );
+  });
+
+  it('builds with --debug flag when debug option is set', async () => {
+    createFullProject();
+    const originalCwd = process.cwd();
+    process.chdir(tempDir);
+
+    try {
+      await build({ debug: true });
+    } catch {
+      // Expected
+    }
+
+    process.chdir(originalCwd);
+    expect(execWithProgress).toHaveBeenCalledWith(
+      expect.stringContaining('--debug'),
       expect.any(Object)
     );
   });

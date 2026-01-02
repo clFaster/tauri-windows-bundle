@@ -100,17 +100,18 @@ export async function build(options: BuildOptions): Promise<void> {
   for (const arch of architectures) {
     // Build Tauri app
     const target = arch === 'x64' ? 'x86_64-pc-windows-msvc' : 'aarch64-pc-windows-msvc';
-    const releaseFlag = options.release ? '--release' : '';
+    // Tauri CLI defaults to release mode, use --debug for debug builds
+    const debugFlag = options.debug ? '--debug' : '';
 
     // Build command based on runner
     // --no-bundle skips MSI/NSIS bundling since we're creating MSIX
     let buildCommand: string;
     if (runner === 'npm') {
       // npm requires -- to pass args to the script
-      buildCommand = `npm run tauri build -- --target ${target} --no-bundle ${releaseFlag}`.trim();
+      buildCommand = `npm run tauri build -- --target ${target} --no-bundle ${debugFlag}`.trim();
     } else {
       // cargo, pnpm, yarn, bun, etc.
-      buildCommand = `${runner} tauri build --target ${target} --no-bundle ${releaseFlag}`.trim();
+      buildCommand = `${runner} tauri build --target ${target} --no-bundle ${debugFlag}`.trim();
     }
 
     try {

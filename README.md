@@ -100,14 +100,14 @@ Note: `runFullTrust` is always auto-added (required for Tauri apps).
 ### Build
 
 ```bash
-# Build x64 only (default, uses cargo)
+# Build x64 only (default, uses cargo, release mode)
 pnpm tauri:windows:build
 
 # Build multiarch bundle (x64 + arm64)
 pnpm tauri:windows:build --arch x64,arm64
 
-# Release build
-pnpm tauri:windows:build --release
+# Debug build (release is default)
+pnpm tauri:windows:build --debug
 
 # Use different build runner (pnpm, npm, yarn, bun, etc.)
 pnpm tauri:windows:build --runner pnpm
@@ -131,7 +131,7 @@ npx @choochmeque/tauri-windows-bundle init [options]
 
 npx @choochmeque/tauri-windows-bundle build [options]
   --arch <archs>       Architectures (comma-separated: x64,arm64) [default: x64]
-  --release            Build in release mode
+  --debug              Build in debug mode (release is default)
   --min-windows <ver>  Minimum Windows version [default: 10.0.17763.0]
   --runner <runner>    Build runner (cargo, pnpm, npm, yarn, bun) [default: cargo]
   --verbose            Show full build output instead of spinner
