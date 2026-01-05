@@ -346,6 +346,56 @@ Use thumbprint from `tauri.conf.json`:
 }
 ```
 
+## GitHub Actions
+
+Example workflow for automated MSIX builds.
+
+> **Note:** Run `npx @choochmeque/tauri-windows-bundle@latest init` locally first to generate the required configuration files, then commit them to your repository.
+
+```yaml
+name: Build Windows MSIX
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: x86_64-pc-windows-msvc, aarch64-pc-windows-msvc
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build MSIX bundle
+        run: pnpm tauri:windows:build --arch x64,arm64 --runner pnpm
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: msix-bundle
+          path: src-tauri/target/msix/*.msixbundle
+```
+
+Output will be in `src-tauri/target/msix/YourApp.msixbundle`.
+
 ## License
 
 [MIT](LICENSE)
