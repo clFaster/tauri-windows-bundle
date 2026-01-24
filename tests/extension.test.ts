@@ -751,6 +751,28 @@ describe('extension commands', () => {
       );
       expect(config.extensions.toastActivation).toEqual({ activationType: 'foreground' });
     });
+
+    it('adds to existing extensions object', async () => {
+      const windowsDir = createProject();
+      fs.writeFileSync(
+        path.join(windowsDir, 'bundle.config.json'),
+        JSON.stringify({
+          publisher: 'CN=Test',
+          publisherDisplayName: 'Test',
+          extensions: {
+            fileAssociations: [{ name: 'test', extensions: ['.txt'] }],
+          },
+        })
+      );
+
+      await extensionEnableToastActivation({ path: tempDir });
+
+      const config = JSON.parse(
+        fs.readFileSync(path.join(windowsDir, 'bundle.config.json'), 'utf-8')
+      );
+      expect(config.extensions.toastActivation).toEqual({ activationType: 'foreground' });
+      expect(config.extensions.fileAssociations).toHaveLength(1);
+    });
   });
 
   describe('extensionDisableToastActivation', () => {
@@ -893,6 +915,67 @@ describe('extension commands', () => {
 
       expect(consoleSpy).toHaveBeenCalledWith('Invalid event type. Cancelled.');
     });
+
+    it('adds to existing extensions object', async () => {
+      const windowsDir = createProject();
+      // Add some existing extensions
+      fs.writeFileSync(
+        path.join(windowsDir, 'bundle.config.json'),
+        JSON.stringify({
+          publisher: 'CN=Test',
+          publisherDisplayName: 'Test',
+          extensions: {
+            fileAssociations: [{ name: 'test', extensions: ['.txt'] }],
+          },
+        })
+      );
+
+      mockQuestion
+        .mockImplementationOnce((_msg: string, cb: (answer: string) => void) => cb('play'))
+        .mockImplementationOnce((_msg: string, cb: (answer: string) => void) => cb('Play Media'))
+        .mockImplementationOnce((_msg: string, cb: (answer: string) => void) => cb('1'))
+        .mockImplementationOnce((_msg: string, cb: (answer: string) => void) =>
+          cb('PlayVideoFilesOnArrival')
+        );
+
+      await extensionAddAutoplay({ path: tempDir });
+
+      const config = JSON.parse(
+        fs.readFileSync(path.join(windowsDir, 'bundle.config.json'), 'utf-8')
+      );
+      expect(config.extensions.autoplayHandlers).toHaveLength(1);
+      expect(config.extensions.fileAssociations).toHaveLength(1);
+    });
+
+    it('adds second handler to existing autoplayHandlers array', async () => {
+      const windowsDir = createProject();
+      // Config with existing autoplay handlers
+      fs.writeFileSync(
+        path.join(windowsDir, 'bundle.config.json'),
+        JSON.stringify({
+          publisher: 'CN=Test',
+          publisherDisplayName: 'Test',
+          extensions: {
+            autoplayHandlers: [
+              { verb: 'existing', actionDisplayName: 'Existing Action', contentEvent: 'SomeEvent' },
+            ],
+          },
+        })
+      );
+
+      mockQuestion
+        .mockImplementationOnce((_msg: string, cb: (answer: string) => void) => cb('new'))
+        .mockImplementationOnce((_msg: string, cb: (answer: string) => void) => cb('New Action'))
+        .mockImplementationOnce((_msg: string, cb: (answer: string) => void) => cb('1'))
+        .mockImplementationOnce((_msg: string, cb: (answer: string) => void) => cb('NewEvent'));
+
+      await extensionAddAutoplay({ path: tempDir });
+
+      const config = JSON.parse(
+        fs.readFileSync(path.join(windowsDir, 'bundle.config.json'), 'utf-8')
+      );
+      expect(config.extensions.autoplayHandlers).toHaveLength(2);
+    });
   });
 
   describe('extensionEnablePrintTaskSettings', () => {
@@ -904,6 +987,29 @@ describe('extension commands', () => {
         fs.readFileSync(path.join(windowsDir, 'bundle.config.json'), 'utf-8')
       );
       expect(config.extensions.printTaskSettings).toEqual({ displayName: 'Print Settings' });
+    });
+
+    it('adds to existing extensions object', async () => {
+      const windowsDir = createProject();
+      // Add some existing extensions
+      fs.writeFileSync(
+        path.join(windowsDir, 'bundle.config.json'),
+        JSON.stringify({
+          publisher: 'CN=Test',
+          publisherDisplayName: 'Test',
+          extensions: {
+            fileAssociations: [{ name: 'test', extensions: ['.txt'] }],
+          },
+        })
+      );
+
+      await extensionEnablePrintTaskSettings({ path: tempDir });
+
+      const config = JSON.parse(
+        fs.readFileSync(path.join(windowsDir, 'bundle.config.json'), 'utf-8')
+      );
+      expect(config.extensions.printTaskSettings).toEqual({ displayName: 'Print Settings' });
+      expect(config.extensions.fileAssociations).toHaveLength(1);
     });
   });
 
@@ -955,6 +1061,45 @@ describe('extension commands', () => {
         '{12345678-1234-1234-1234-123456789012}'
       );
       expect(config.extensions.thumbnailHandlers[0].fileTypes).toEqual(['.myf', '.myx']);
+    });
+
+    it('adds to existing extensions object', async () => {
+      // Create project with config that HAS extensions but NO thumbnailHandlers
+      const srcTauri = path.join(tempDir, 'src-tauri');
+      fs.mkdirSync(srcTauri, { recursive: true });
+      fs.writeFileSync(
+        path.join(srcTauri, 'tauri.conf.json'),
+        JSON.stringify({ productName: 'TestApp' })
+      );
+
+      const windowsDir = path.join(srcTauri, 'gen', 'windows');
+      fs.mkdirSync(windowsDir, { recursive: true });
+      // Config WITH extensions but WITHOUT thumbnailHandlers
+      fs.writeFileSync(
+        path.join(windowsDir, 'bundle.config.json'),
+        JSON.stringify({
+          publisher: 'CN=Test',
+          publisherDisplayName: 'Test',
+          extensions: {
+            fileAssociations: [{ name: 'test', extensions: ['.txt'] }],
+          },
+        })
+      );
+
+      mockQuestion
+        .mockImplementationOnce((_msg: string, cb: (answer: string) => void) =>
+          cb('{99999999-9999-9999-9999-999999999999}')
+        )
+        .mockImplementationOnce((_msg: string, cb: (answer: string) => void) => cb('.test'));
+
+      await extensionAddThumbnailHandler({ path: tempDir });
+
+      const config = JSON.parse(
+        fs.readFileSync(path.join(windowsDir, 'bundle.config.json'), 'utf-8')
+      );
+      expect(config.extensions.thumbnailHandlers).toHaveLength(1);
+      // Existing extensions should still be there
+      expect(config.extensions.fileAssociations).toHaveLength(1);
     });
 
     it('cancels when clsid is empty', async () => {
@@ -1026,6 +1171,45 @@ describe('extension commands', () => {
       await extensionAddPreviewHandler({ path: tempDir });
 
       expect(consoleSpy).toHaveBeenCalledWith('Cancelled.');
+    });
+
+    it('adds to existing extensions object', async () => {
+      // Create project with config that HAS extensions but NO previewHandlers
+      const srcTauri = path.join(tempDir, 'src-tauri');
+      fs.mkdirSync(srcTauri, { recursive: true });
+      fs.writeFileSync(
+        path.join(srcTauri, 'tauri.conf.json'),
+        JSON.stringify({ productName: 'TestApp' })
+      );
+
+      const windowsDir = path.join(srcTauri, 'gen', 'windows');
+      fs.mkdirSync(windowsDir, { recursive: true });
+      // Config WITH extensions but WITHOUT previewHandlers
+      fs.writeFileSync(
+        path.join(windowsDir, 'bundle.config.json'),
+        JSON.stringify({
+          publisher: 'CN=Test',
+          publisherDisplayName: 'Test',
+          extensions: {
+            fileAssociations: [{ name: 'test', extensions: ['.txt'] }],
+          },
+        })
+      );
+
+      mockQuestion
+        .mockImplementationOnce((_msg: string, cb: (answer: string) => void) =>
+          cb('{88888888-8888-8888-8888-888888888888}')
+        )
+        .mockImplementationOnce((_msg: string, cb: (answer: string) => void) => cb('.preview'));
+
+      await extensionAddPreviewHandler({ path: tempDir });
+
+      const config = JSON.parse(
+        fs.readFileSync(path.join(windowsDir, 'bundle.config.json'), 'utf-8')
+      );
+      expect(config.extensions.previewHandlers).toHaveLength(1);
+      // Existing extensions should still be there
+      expect(config.extensions.fileAssociations).toHaveLength(1);
     });
   });
 

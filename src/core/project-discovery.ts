@@ -46,6 +46,23 @@ export function readTauriConfig(projectRoot: string): TauriConfig {
   }
 }
 
+export function readTauriWindowsConfig(projectRoot: string): TauriConfig | null {
+  const configPath = path.join(projectRoot, 'src-tauri', 'tauri.windows.conf.json');
+
+  if (!fs.existsSync(configPath)) {
+    return null;
+  }
+
+  try {
+    const content = fs.readFileSync(configPath, 'utf-8');
+    return JSON.parse(content) as TauriConfig;
+  } catch (error) {
+    throw new Error(
+      `Failed to parse tauri.windows.conf.json: ${error instanceof Error ? error.message : error}`
+    );
+  }
+}
+
 export function readBundleConfig(windowsDir: string): BundleConfig {
   const configPath = path.join(windowsDir, 'bundle.config.json');
 

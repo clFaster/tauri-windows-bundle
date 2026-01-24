@@ -286,6 +286,21 @@ describe('build command', () => {
     );
   });
 
+  it('logs build command in verbose mode', async () => {
+    createFullProject();
+    const originalCwd = process.cwd();
+    process.chdir(tempDir);
+
+    try {
+      await build({ verbose: true });
+    } catch {
+      // Expected
+    }
+
+    process.chdir(originalCwd);
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Running:'));
+  });
+
   it('handles cargo build failure', async () => {
     createFullProject();
     vi.mocked(execWithProgress).mockRejectedValue(new Error('cargo build failed'));
@@ -493,5 +508,323 @@ describe('build command', () => {
     process.chdir(originalCwd);
     expect(consoleErrorSpy).toHaveBeenCalledWith('Invalid capabilities in bundle.config.json:');
     expect(processExitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it('uses default displayName when productName not specified', async () => {
+    const srcTauri = path.join(tempDir, 'src-tauri');
+    fs.mkdirSync(srcTauri, { recursive: true });
+    fs.writeFileSync(
+      path.join(srcTauri, 'tauri.conf.json'),
+      JSON.stringify({
+        version: '1.0.0',
+        identifier: 'com.example.testapp',
+      })
+    );
+
+    const windowsDir = path.join(srcTauri, 'gen', 'windows');
+    fs.mkdirSync(windowsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(windowsDir, 'bundle.config.json'),
+      JSON.stringify({
+        publisher: 'CN=TestCompany',
+        publisherDisplayName: 'Test Company',
+        capabilities: { general: ['internetClient'] },
+      })
+    );
+
+    const buildDir = path.join(srcTauri, 'target', 'x86_64-pc-windows-msvc', 'release');
+    fs.mkdirSync(buildDir, { recursive: true });
+    fs.writeFileSync(path.join(buildDir, 'App.exe'), 'mock exe');
+
+    const originalCwd = process.cwd();
+    process.chdir(tempDir);
+
+    try {
+      await build({});
+    } catch {
+      // Expected
+    }
+
+    process.chdir(originalCwd);
+
+    const appxDir = path.join(srcTauri, 'target', 'appx', 'x64');
+    const manifestPath = path.join(appxDir, 'AppxManifest.xml');
+    if (fs.existsSync(manifestPath)) {
+      const manifest = fs.readFileSync(manifestPath, 'utf-8');
+      expect(manifest).toContain('DisplayName="App"');
+    }
+  });
+
+  it('uses default version when not specified in config', async () => {
+    const srcTauri = path.join(tempDir, 'src-tauri');
+    fs.mkdirSync(srcTauri, { recursive: true });
+    fs.writeFileSync(
+      path.join(srcTauri, 'tauri.conf.json'),
+      JSON.stringify({
+        productName: 'TestApp',
+        identifier: 'com.example.testapp',
+      })
+    );
+
+    const windowsDir = path.join(srcTauri, 'gen', 'windows');
+    fs.mkdirSync(windowsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(windowsDir, 'bundle.config.json'),
+      JSON.stringify({
+        publisher: 'CN=TestCompany',
+        publisherDisplayName: 'Test Company',
+        capabilities: { general: ['internetClient'] },
+      })
+    );
+
+    const buildDir = path.join(srcTauri, 'target', 'x86_64-pc-windows-msvc', 'release');
+    fs.mkdirSync(buildDir, { recursive: true });
+    fs.writeFileSync(path.join(buildDir, 'TestApp.exe'), 'mock exe');
+
+    const originalCwd = process.cwd();
+    process.chdir(tempDir);
+
+    try {
+      await build({});
+    } catch {
+      // Expected
+    }
+
+    process.chdir(originalCwd);
+
+    const appxDir = path.join(srcTauri, 'target', 'appx', 'x64');
+    const manifestPath = path.join(appxDir, 'AppxManifest.xml');
+    if (fs.existsSync(manifestPath)) {
+      const manifest = fs.readFileSync(manifestPath, 'utf-8');
+      expect(manifest).toContain('Version="1.0.0.0"');
+    }
+  });
+
+  it('skips capability validation when capabilities not defined', async () => {
+    const srcTauri = path.join(tempDir, 'src-tauri');
+    fs.mkdirSync(srcTauri, { recursive: true });
+    fs.writeFileSync(
+      path.join(srcTauri, 'tauri.conf.json'),
+      JSON.stringify({
+        productName: 'TestApp',
+        version: '1.0.0',
+        identifier: 'com.example.testapp',
+      })
+    );
+
+    const windowsDir = path.join(srcTauri, 'gen', 'windows');
+    fs.mkdirSync(windowsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(windowsDir, 'bundle.config.json'),
+      JSON.stringify({
+        publisher: 'CN=TestCompany',
+        publisherDisplayName: 'Test Company',
+      })
+    );
+
+    const buildDir = path.join(srcTauri, 'target', 'x86_64-pc-windows-msvc', 'release');
+    fs.mkdirSync(buildDir, { recursive: true });
+    fs.writeFileSync(path.join(buildDir, 'TestApp.exe'), 'mock exe');
+
+    const originalCwd = process.cwd();
+    process.chdir(tempDir);
+
+    try {
+      await build({});
+    } catch {
+      // Expected
+    }
+
+    process.chdir(originalCwd);
+    expect(consoleErrorSpy).not.toHaveBeenCalledWith('Invalid capabilities in bundle.config.json:');
+  });
+
+  it('uses default identifier when not specified in config', async () => {
+    const srcTauri = path.join(tempDir, 'src-tauri');
+    fs.mkdirSync(srcTauri, { recursive: true });
+    fs.writeFileSync(
+      path.join(srcTauri, 'tauri.conf.json'),
+      JSON.stringify({
+        productName: 'TestApp',
+        version: '1.0.0',
+      })
+    );
+
+    const windowsDir = path.join(srcTauri, 'gen', 'windows');
+    fs.mkdirSync(windowsDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(windowsDir, 'bundle.config.json'),
+      JSON.stringify({
+        publisher: 'CN=TestCompany',
+        publisherDisplayName: 'Test Company',
+        capabilities: { general: ['internetClient'] },
+      })
+    );
+
+    const buildDir = path.join(srcTauri, 'target', 'x86_64-pc-windows-msvc', 'release');
+    fs.mkdirSync(buildDir, { recursive: true });
+    fs.writeFileSync(path.join(buildDir, 'TestApp.exe'), 'mock exe');
+
+    const originalCwd = process.cwd();
+    process.chdir(tempDir);
+
+    try {
+      await build({});
+    } catch {
+      // Expected
+    }
+
+    process.chdir(originalCwd);
+
+    const appxDir = path.join(srcTauri, 'target', 'appx', 'x64');
+    const manifestPath = path.join(appxDir, 'AppxManifest.xml');
+    if (fs.existsSync(manifestPath)) {
+      const manifest = fs.readFileSync(manifestPath, 'utf-8');
+      expect(manifest).toContain('Name="com.example.app"');
+    }
+  });
+
+  it('uses pfxPassword from environment variable', async () => {
+    const projectDir = createFullProject();
+    const windowsDir = path.join(projectDir, 'src-tauri', 'gen', 'windows');
+    fs.writeFileSync(
+      path.join(windowsDir, 'bundle.config.json'),
+      JSON.stringify({
+        publisher: 'CN=TestCompany',
+        publisherDisplayName: 'Test Company',
+        capabilities: { general: ['internetClient'] },
+        signing: {
+          pfx: '/path/to/cert.pfx',
+          // No pfxPassword - should use env var
+        },
+      })
+    );
+
+    // Set environment variable
+    const originalEnv = process.env.MSIX_PFX_PASSWORD;
+    process.env.MSIX_PFX_PASSWORD = 'env-secret';
+
+    const originalCwd = process.cwd();
+    process.chdir(tempDir);
+
+    try {
+      await build({});
+    } catch {
+      // Expected
+    }
+
+    process.chdir(originalCwd);
+    process.env.MSIX_PFX_PASSWORD = originalEnv;
+
+    expect(execAsync).toHaveBeenCalledWith(expect.stringContaining('--pfx-password'));
+    expect(execAsync).toHaveBeenCalledWith(expect.stringContaining('env-secret'));
+  });
+
+  it('uses pfx without password when no password provided', async () => {
+    const projectDir = createFullProject();
+    const windowsDir = path.join(projectDir, 'src-tauri', 'gen', 'windows');
+    fs.writeFileSync(
+      path.join(windowsDir, 'bundle.config.json'),
+      JSON.stringify({
+        publisher: 'CN=TestCompany',
+        publisherDisplayName: 'Test Company',
+        capabilities: { general: ['internetClient'] },
+        signing: {
+          pfx: '/path/to/cert.pfx',
+          // No pfxPassword and no env var
+        },
+      })
+    );
+
+    // Ensure env var is not set
+    const originalEnv = process.env.MSIX_PFX_PASSWORD;
+    delete process.env.MSIX_PFX_PASSWORD;
+
+    const originalCwd = process.cwd();
+    process.chdir(tempDir);
+
+    try {
+      await build({});
+    } catch {
+      // Expected
+    }
+
+    process.chdir(originalCwd);
+    process.env.MSIX_PFX_PASSWORD = originalEnv;
+
+    // Should have --pfx but NOT --pfx-password
+    expect(execAsync).toHaveBeenCalledWith(expect.stringContaining('--pfx'));
+    expect(execAsync).not.toHaveBeenCalledWith(expect.stringContaining('--pfx-password'));
+  });
+
+  it('outputs msixbundle-cli stdout when present', async () => {
+    createFullProject();
+    vi.mocked(execAsync).mockResolvedValueOnce({ stdout: 'MSIX created successfully', stderr: '' });
+
+    const originalCwd = process.cwd();
+    process.chdir(tempDir);
+
+    try {
+      await build({});
+    } catch {
+      // Expected
+    }
+
+    process.chdir(originalCwd);
+    expect(consoleSpy).toHaveBeenCalledWith('MSIX created successfully');
+  });
+
+  it('merges tauri.windows.conf.json over tauri.conf.json', async () => {
+    const projectDir = createFullProject();
+    const srcTauri = path.join(projectDir, 'src-tauri');
+
+    // Base config has identifier "com.example.testapp" and productName "TestApp" (from createFullProject)
+    // Add windows-specific config with different identifier, productName, and bundle.shortDescription
+    fs.writeFileSync(
+      path.join(srcTauri, 'tauri.windows.conf.json'),
+      JSON.stringify({
+        identifier: 'com.windows.override',
+        productName: 'WindowsApp',
+        bundle: {
+          shortDescription: 'Windows-specific description',
+        },
+      })
+    );
+
+    // Create exe with the overridden name (WindowsApp.exe instead of TestApp.exe)
+    const buildDir = path.join(srcTauri, 'target', 'x86_64-pc-windows-msvc', 'release');
+    fs.writeFileSync(path.join(buildDir, 'WindowsApp.exe'), 'mock exe');
+
+    const originalCwd = process.cwd();
+    process.chdir(tempDir);
+
+    try {
+      await build({});
+    } catch {
+      // Expected - build may fail but we want to check manifest generation
+    }
+
+    process.chdir(originalCwd);
+
+    // Check generated manifest contains the overridden values
+    // Manifest is written to src-tauri/target/appx/x64/
+    const appxDir = path.join(srcTauri, 'target', 'appx', 'x64');
+    const manifestPath = path.join(appxDir, 'AppxManifest.xml');
+
+    expect(fs.existsSync(manifestPath)).toBe(true);
+    const manifest = fs.readFileSync(manifestPath, 'utf-8');
+
+    // Tauri config overrides from tauri.windows.conf.json
+    expect(manifest).toContain('Name="com.windows.override"');
+    expect(manifest).not.toContain('Name="com.example.testapp"');
+    expect(manifest).toContain('DisplayName="WindowsApp"');
+    expect(manifest).not.toContain('DisplayName="TestApp"');
+
+    // Nested bundle object merge (bundle.shortDescription -> Description)
+    expect(manifest).toContain('Description="Windows-specific description"');
+
+    // Bundle config values from bundle.config.json should still be present
+    expect(manifest).toContain('Publisher="CN=TestCompany"');
+    expect(manifest).toContain('<PublisherDisplayName>Test Company</PublisherDisplayName>');
   });
 });

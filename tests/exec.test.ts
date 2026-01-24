@@ -447,4 +447,21 @@ describe('Spinner', () => {
 
     clearSpy.mockRestore();
   });
+
+  it('handles stop when not started', () => {
+    const writeSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    const clearSpy = vi.spyOn(global, 'clearInterval');
+
+    const spinner = new Spinner('Test');
+    // Stop without calling start() - intervalId should be null
+    spinner.stop();
+
+    // clearInterval should not be called since interval was never started
+    expect(clearSpy).not.toHaveBeenCalled();
+    // But the message should still be written
+    expect(writeSpy).toHaveBeenCalledWith(expect.stringContaining('✓'));
+
+    writeSpy.mockRestore();
+    clearSpy.mockRestore();
+  });
 });

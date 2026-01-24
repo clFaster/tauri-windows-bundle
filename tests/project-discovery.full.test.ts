@@ -5,6 +5,7 @@ import * as os from 'node:os';
 import {
   findProjectRoot,
   readTauriConfig,
+  readTauriWindowsConfig,
   readBundleConfig,
   getWindowsDir,
 } from '../src/core/project-discovery.js';
@@ -49,6 +50,14 @@ describe('findProjectRoot', () => {
     expect(result).toBe(tempDir);
   });
 
+  it('ignores package.json without src-tauri directory', () => {
+    // Create package.json but no src-tauri directory
+    fs.writeFileSync(path.join(tempDir, 'package.json'), '{}');
+
+    // Should not find this as a Tauri project
+    expect(() => findProjectRoot(tempDir)).toThrow('Could not find Tauri project root');
+  });
+
   it('throws error when project not found', () => {
     expect(() => findProjectRoot(tempDir)).toThrow('Could not find Tauri project root');
   });
@@ -88,6 +97,50 @@ describe('readTauriConfig', () => {
     fs.writeFileSync(path.join(srcTauri, 'tauri.conf.json'), 'invalid json');
 
     expect(() => readTauriConfig(tempDir)).toThrow('Failed to parse tauri.conf.json');
+  });
+});
+
+describe('readTauriWindowsConfig', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tauri-bundle-test-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('returns null when tauri.windows.conf.json does not exist', () => {
+    const srcTauri = path.join(tempDir, 'src-tauri');
+    fs.mkdirSync(srcTauri, { recursive: true });
+
+    const config = readTauriWindowsConfig(tempDir);
+    expect(config).toBeNull();
+  });
+
+  it('reads and parses tauri.windows.conf.json when it exists', () => {
+    const srcTauri = path.join(tempDir, 'src-tauri');
+    fs.mkdirSync(srcTauri, { recursive: true });
+    fs.writeFileSync(
+      path.join(srcTauri, 'tauri.windows.conf.json'),
+      JSON.stringify({ identifier: 'com.windows.app', productName: 'Windows App' })
+    );
+
+    const config = readTauriWindowsConfig(tempDir);
+    expect(config).not.toBeNull();
+    expect(config?.identifier).toBe('com.windows.app');
+    expect(config?.productName).toBe('Windows App');
+  });
+
+  it('throws error on invalid JSON', () => {
+    const srcTauri = path.join(tempDir, 'src-tauri');
+    fs.mkdirSync(srcTauri, { recursive: true });
+    fs.writeFileSync(path.join(srcTauri, 'tauri.windows.conf.json'), 'invalid json');
+
+    expect(() => readTauriWindowsConfig(tempDir)).toThrow(
+      'Failed to parse tauri.windows.conf.json'
+    );
   });
 });
 

@@ -4,10 +4,12 @@ import { DEFAULT_MIN_WINDOWS_VERSION, DEFAULT_RUNNER, validateCapabilities } fro
 import {
   findProjectRoot,
   readTauriConfig,
+  readTauriWindowsConfig,
   readBundleConfig,
   getWindowsDir,
   toFourPartVersion,
 } from '../core/project-discovery.js';
+import { jsonMergePatch } from '../utils/merge.js';
 import { prepareAppxContent } from '../core/appx-content.js';
 import {
   execAsync,
@@ -66,7 +68,11 @@ export async function build(options: BuildOptions): Promise<void> {
   const windowsDir = getWindowsDir(projectRoot);
 
   // Read configs
-  const tauriConfig = readTauriConfig(projectRoot);
+  let tauriConfig = readTauriConfig(projectRoot);
+  const windowsConfig = readTauriWindowsConfig(projectRoot);
+  if (windowsConfig) {
+    tauriConfig = jsonMergePatch(tauriConfig, windowsConfig);
+  }
   const bundleConfig = readBundleConfig(windowsDir);
 
   // Validate capabilities
