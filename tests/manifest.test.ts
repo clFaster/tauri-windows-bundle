@@ -22,6 +22,11 @@ describe('generateManifest', () => {
     expect(manifest).toContain('1.0.0.0');
   });
 
+  it('preserves dots in package name from identifier', () => {
+    const manifest = generateManifest(mockConfig, 'x64', '10.0.17763.0');
+    expect(manifest).toContain('Name="com.example.testapp"');
+  });
+
   it('generates manifest with correct arch', () => {
     const manifest = generateManifest(mockConfig, 'arm64', '10.0.17763.0');
     expect(manifest).toContain('ProcessorArchitecture="arm64"');

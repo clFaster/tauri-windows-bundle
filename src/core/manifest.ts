@@ -48,7 +48,7 @@ export function generateManifestTemplate(windowsDir: string): void {
 
 export function generateManifest(config: MergedConfig, arch: string, minVersion: string): string {
   const variables: Record<string, string> = {
-    PACKAGE_NAME: config.identifier.replace(/\./g, ''),
+    PACKAGE_NAME: config.identifier,
     PUBLISHER: config.publisher,
     VERSION: config.version,
     ARCH: arch,
