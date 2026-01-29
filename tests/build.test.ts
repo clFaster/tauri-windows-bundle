@@ -827,4 +827,143 @@ describe('build command', () => {
     expect(manifest).toContain('Publisher="CN=TestCompany"');
     expect(manifest).toContain('<PublisherDisplayName>Test Company</PublisherDisplayName>');
   });
+
+  it('resolves publisher from tauri.windows.conf.json when not in bundle.config.json', async () => {
+    const projectDir = createFullProject();
+    const srcTauri = path.join(projectDir, 'src-tauri');
+    const windowsDir = path.join(srcTauri, 'gen', 'windows');
+
+    // bundle.config.json without publisher
+    fs.writeFileSync(
+      path.join(windowsDir, 'bundle.config.json'),
+      JSON.stringify({
+        publisherDisplayName: 'Test Company',
+        capabilities: { general: ['internetClient'] },
+      })
+    );
+
+    // publisher defined in tauri.windows.conf.json
+    fs.writeFileSync(
+      path.join(srcTauri, 'tauri.windows.conf.json'),
+      JSON.stringify({
+        bundle: {
+          publisher: 'CN=FromWindowsConfig',
+        },
+      })
+    );
+
+    const originalCwd = process.cwd();
+    process.chdir(tempDir);
+
+    try {
+      await build({});
+    } catch {
+      // Expected
+    }
+
+    process.chdir(originalCwd);
+
+    const appxDir = path.join(srcTauri, 'target', 'appx', 'x64');
+    const manifestPath = path.join(appxDir, 'AppxManifest.xml');
+
+    expect(fs.existsSync(manifestPath)).toBe(true);
+    const manifest = fs.readFileSync(manifestPath, 'utf-8');
+    expect(manifest).toContain('Publisher="CN=FromWindowsConfig"');
+    expect(manifest).toContain('<PublisherDisplayName>Test Company</PublisherDisplayName>');
+  });
+
+  it('bundle.config.json publisher takes precedence over tauri config', async () => {
+    const projectDir = createFullProject();
+    const srcTauri = path.join(projectDir, 'src-tauri');
+
+    // bundle.config.json has publisher
+    // (already set by createFullProject with CN=TestCompany)
+
+    // tauri.windows.conf.json also has publisher
+    fs.writeFileSync(
+      path.join(srcTauri, 'tauri.windows.conf.json'),
+      JSON.stringify({
+        bundle: {
+          publisher: 'CN=FromWindowsConfig',
+        },
+      })
+    );
+
+    const originalCwd = process.cwd();
+    process.chdir(tempDir);
+
+    try {
+      await build({});
+    } catch {
+      // Expected
+    }
+
+    process.chdir(originalCwd);
+
+    const appxDir = path.join(srcTauri, 'target', 'appx', 'x64');
+    const manifestPath = path.join(appxDir, 'AppxManifest.xml');
+
+    expect(fs.existsSync(manifestPath)).toBe(true);
+    const manifest = fs.readFileSync(manifestPath, 'utf-8');
+    // bundle.config.json value wins
+    expect(manifest).toContain('Publisher="CN=TestCompany"');
+    expect(manifest).not.toContain('Publisher="CN=FromWindowsConfig"');
+  });
+
+  it('exits with error when publisher is missing from all configs', async () => {
+    const projectDir = createFullProject();
+    const windowsDir = path.join(projectDir, 'src-tauri', 'gen', 'windows');
+
+    // bundle.config.json without publisher
+    fs.writeFileSync(
+      path.join(windowsDir, 'bundle.config.json'),
+      JSON.stringify({
+        publisherDisplayName: 'Test Company',
+        capabilities: { general: ['internetClient'] },
+      })
+    );
+
+    const originalCwd = process.cwd();
+    process.chdir(tempDir);
+
+    await expect(build({})).rejects.toThrow('process.exit called');
+
+    process.chdir(originalCwd);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Publisher is required'));
+    expect(processExitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it('uses publisher as publisherDisplayName fallback', async () => {
+    const projectDir = createFullProject();
+    const srcTauri = path.join(projectDir, 'src-tauri');
+    const windowsDir = path.join(srcTauri, 'gen', 'windows');
+
+    // bundle.config.json with publisher but no publisherDisplayName
+    fs.writeFileSync(
+      path.join(windowsDir, 'bundle.config.json'),
+      JSON.stringify({
+        publisher: 'CN=TestCompany',
+        capabilities: { general: ['internetClient'] },
+      })
+    );
+
+    const originalCwd = process.cwd();
+    process.chdir(tempDir);
+
+    try {
+      await build({});
+    } catch {
+      // Expected
+    }
+
+    process.chdir(originalCwd);
+
+    const appxDir = path.join(srcTauri, 'target', 'appx', 'x64');
+    const manifestPath = path.join(appxDir, 'AppxManifest.xml');
+
+    expect(fs.existsSync(manifestPath)).toBe(true);
+    const manifest = fs.readFileSync(manifestPath, 'utf-8');
+    // publisherDisplayName falls back to publisher value
+    expect(manifest).toContain('<PublisherDisplayName>CN=TestCompany</PublisherDisplayName>');
+  });
 });

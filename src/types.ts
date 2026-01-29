@@ -6,6 +6,7 @@ export interface TauriConfig {
     icon?: string[];
     shortDescription?: string;
     longDescription?: string;
+    publisher?: string;
     resources?: (string | { src: string; target: string })[];
     windows?: {
       certificateThumbprint?: string;
@@ -20,8 +21,8 @@ export interface CapabilitiesConfig {
 }
 
 export interface BundleConfig {
-  publisher: string;
-  publisherDisplayName: string;
+  publisher?: string;
+  publisherDisplayName?: string;
   capabilities?: CapabilitiesConfig;
   extensions?: {
     shareTarget?: boolean;
@@ -107,6 +108,8 @@ export interface PreviewHandler {
 }
 
 export interface MergedConfig extends BundleConfig {
+  publisher: string;
+  publisherDisplayName: string;
   displayName: string;
   version: string;
   description: string;

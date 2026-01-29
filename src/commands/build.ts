@@ -88,6 +88,17 @@ export async function build(options: BuildOptions): Promise<void> {
     }
   }
 
+  // Resolve publisher with fallback to tauriConfig
+  const publisher = bundleConfig.publisher || tauriConfig.bundle?.publisher;
+  if (!publisher) {
+    console.error(
+      'Publisher is required. Set it in bundle.config.json or in tauri.conf.json / tauri.windows.conf.json under bundle.publisher'
+    );
+    process.exit(1);
+  }
+
+  const publisherDisplayName = bundleConfig.publisherDisplayName || publisher;
+
   // Merge config
   const config: MergedConfig = {
     displayName: tauriConfig.productName || 'App',
@@ -97,6 +108,8 @@ export async function build(options: BuildOptions): Promise<void> {
     description: tauriConfig.bundle?.shortDescription || '',
     identifier: tauriConfig.identifier || 'com.example.app',
     ...bundleConfig,
+    publisher,
+    publisherDisplayName,
   };
 
   // Architectures from CLI flag

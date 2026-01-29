@@ -73,6 +73,8 @@ Edit `src-tauri/gen/windows/bundle.config.json`:
 }
 ```
 
+`publisher` and `publisherDisplayName` are optional in `bundle.config.json`. If omitted, `publisher` falls back to `bundle.publisher` from `tauri.conf.json` or `tauri.windows.conf.json`. If `publisherDisplayName` is omitted, it defaults to the resolved `publisher` value.
+
 **Capabilities** are validated at build time. Three types are supported:
 
 ```json
@@ -91,13 +93,16 @@ Edit `src-tauri/gen/windows/bundle.config.json`:
 
 Note: `runFullTrust` is always auto-added (required for Tauri apps).
 
-**Auto-read from tauri.conf.json:**
+**Auto-read from tauri.conf.json / tauri.windows.conf.json:**
 - `displayName` ← `productName`
 - `version` ← `version` (auto-converted to 4-part: `1.0.0` → `1.0.0.0`)
 - `description` ← `bundle.shortDescription`
+- `publisher` ← `bundle.publisher` (fallback when not in bundle.config.json)
 - `icons` ← `bundle.icon`
 - `resources` ← `bundle.resources`
 - `signing` ← `bundle.windows.certificateThumbprint`
+
+**Platform-specific config:** Values in `tauri.windows.conf.json` override `tauri.conf.json` using [JSON Merge Patch (RFC 7396)](https://datatracker.ietf.org/doc/html/rfc7396). This lets you define Windows-specific settings like `identifier`, `productName`, or `bundle.publisher` separately.
 
 ### Build
 
