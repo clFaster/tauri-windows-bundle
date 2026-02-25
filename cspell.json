@@ -44,6 +44,8 @@
     "autoplay",
     "msixbundle",
     "msix",
+    "makepri",
+    "priconfig",
     "multiarch",
     "msvc",
     "rustup",
