@@ -73,6 +73,19 @@ describe('generateBundleConfig', () => {
       pfxPassword: null,
     });
   });
+
+  it('includes resource index configuration', () => {
+    const tauriConfig: TauriConfig = {};
+    generateBundleConfig(tempDir, tauriConfig);
+
+    const configPath = path.join(tempDir, 'bundle.config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+
+    expect(config.resourceIndex).toEqual({
+      enabled: false,
+      keepConfig: false,
+    });
+  });
 });
 
 describe('generateGitignore', () => {
