@@ -2,7 +2,12 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { generateManifest, generateManifestTemplate } from '../src/core/manifest.js';
+import {
+  generateManifest,
+  generateManifestTemplate,
+  getDefaultLanguageFromManifestXml,
+  getDefaultLanguageFromManifestFile,
+} from '../src/core/manifest.js';
 import type { MergedConfig } from '../src/types.js';
 
 describe('generateManifest', () => {
@@ -367,6 +372,40 @@ describe('generateManifest', () => {
       );
     } finally {
       fs.rmSync(emptyDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('getDefaultLanguageFromManifest', () => {
+  it('extracts default language from manifest xml', () => {
+    const manifest = `<?xml version="1.0"?>
+<Package>
+  <Resources>
+    <Resource Language="de-de" />
+  </Resources>
+</Package>`;
+
+    expect(getDefaultLanguageFromManifestXml(manifest)).toBe('de-de');
+  });
+
+  it('returns undefined when language is not present', () => {
+    const manifest = `<?xml version="1.0"?><Package><Resources /></Package>`;
+    expect(getDefaultLanguageFromManifestXml(manifest)).toBeUndefined();
+  });
+
+  it('extracts default language from manifest file', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tauri-bundle-manifest-lang-'));
+
+    try {
+      const manifestPath = path.join(tempDir, 'AppxManifest.xml');
+      fs.writeFileSync(
+        manifestPath,
+        `<?xml version="1.0"?><Package><Resources><Resource Language="fr-fr" /></Resources></Package>`
+      );
+
+      expect(getDefaultLanguageFromManifestFile(manifestPath)).toBe('fr-fr');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
     }
   });
 });

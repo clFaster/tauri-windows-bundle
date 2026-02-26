@@ -75,6 +75,20 @@ export function generateManifest(
   return replaceTemplateVariables(getManifestTemplate(windowsDir), variables);
 }
 
+export function getDefaultLanguageFromManifestXml(manifestXml: string): string | undefined {
+  const languageMatch = manifestXml.match(/<Resource\b[^>]*\bLanguage="([^"]+)"/i);
+  return languageMatch?.[1];
+}
+
+export function getDefaultLanguageFromManifestFile(manifestPath: string): string | undefined {
+  if (!fs.existsSync(manifestPath)) {
+    return undefined;
+  }
+
+  const manifest = fs.readFileSync(manifestPath, 'utf-8');
+  return getDefaultLanguageFromManifestXml(manifest);
+}
+
 function generateExtensions(config: MergedConfig): string {
   const extensions: string[] = [];
 
