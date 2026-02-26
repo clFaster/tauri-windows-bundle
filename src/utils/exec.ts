@@ -89,7 +89,7 @@ export function isVersionSufficient(version: string, minVersion: string): boolea
   return patch >= minPatch;
 }
 
-export const MIN_MSIXBUNDLE_CLI_VERSION = '1.1.0';
+export const MIN_MSIXBUNDLE_CLI_VERSION = '1.1.4';
 
 export async function promptInstall(message: string): Promise<boolean> {
   const rl = readline.createInterface({
